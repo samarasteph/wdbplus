@@ -1,0 +1,1 @@
+add_library(wdbplus SHARED wdb.cpp)
