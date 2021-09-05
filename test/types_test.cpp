@@ -141,3 +141,17 @@ TEST_F(UT_Types,blob){
     ASSERT_EQ(b1,b2);
     ASSERT_NE(b1.c_str(),b2.c_str());
 }
+
+TEST_F(UT_Types,var){
+    const wg_int val1 = 1, val2 = 2;
+    wdb::Traits<wdb::Var>::type var1 = val1;
+    wdb::Traits<wdb::Var>::type var2 = val2;
+    wdb::Traits<wdb::Var>::codec cod;
+
+
+    wg_int encoded1 = cod.encode(handle(), var1);
+    wg_int encoded2 = cod.encode(handle(), var2);
+
+    ASSERT_EQ(cod.decode(handle(), encoded1), val1);
+    ASSERT_EQ(cod.decode(handle(), encoded2), val2);
+}

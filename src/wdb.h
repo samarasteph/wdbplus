@@ -92,6 +92,17 @@ public:
 
     wdb::WriteLock lock_write();
     wdb::ReadLock lock_read();
+
+    //indexes
+    wg_int create_index(wg_int column, wg_int type, wg_int *matchrec, wg_int reclen);
+    wg_int create_multi_index(wg_int *columns, wg_int col_count, wg_int type, wg_int *matchrec, wg_int reclen);
+    wg_int drop_index(wg_int index_id);
+    wg_int column_to_index_id(wg_int column, wg_int type, wg_int *matchrec, wg_int reclen);
+    wg_int multi_column_to_index_id(wg_int *columns, wg_int col_count, wg_int type, wg_int *matchrec, wg_int reclen);
+    wg_int get_index_type(wg_int index_id);
+    void * get_index_template(wg_int index_id, wg_int *reclen);
+    void * get_all_indexes(wg_int *count);
+    
 private:
     friend WhiteDb::BasicRecord;
     //friend wdb::PrimitiveDatabase<WhiteDb>;

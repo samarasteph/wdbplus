@@ -4,6 +4,7 @@
 #include <iterator>
 #include <cassert>
 #include <whitedb/dbapi.h>
+#include <whitedb/indexapi.h>
 
 #ifndef __WDB_TEMPLATE_HPP__
 #define __WDB_TEMPLATE_HPP__
@@ -42,6 +43,8 @@ namespace wdb {
     class decode_blob_len: public wdb::primitive<wg_int,void*,wg_int>  { public: decode_blob_len(); };
     class decode_blob_type: public wdb::primitive<char*,void*,wg_int>  { public: decode_blob_type(); };
     class decode_blob_type_len: public wdb::primitive<wg_int,void*,wg_int>  { public: decode_blob_type_len(); };
+    class encode_var_type: public wdb::primitive<wg_int,void*,wg_int> { public: encode_var_type(); };
+    class decode_var_type: public wdb::primitive<wg_int,void*,wg_int> { public: decode_var_type(); };
 
     class create_record:    public wdb::primitive<void*,void*,wg_int> { public: create_record(); };
     class delete_record:    public wdb::primitive<wg_int,void*,void*>  { public: delete_record(); };
@@ -121,6 +124,16 @@ namespace wdb {
         Blob& operator = (const Blob&) = delete;
         wdb::bytes _buffer;
         wdb::byte* _type;
+    };
+
+    class Var {
+    public:
+        Var(const wg_int id=0);
+        Var(const Var& var);
+        wg_int id() const;
+        operator wg_int () const;
+    private:
+        wg_int _id;
     };
 
     template<class Type_t>
@@ -204,6 +217,18 @@ namespace wdb {
         }
     };
 
+    template<> class codec<wdb::Var> {
+    public:
+        wg_int encode(void* db, const wdb::Var& var) const
+        {  
+            const wg_int id = static_cast<wg_int>(var);
+            return encode_var_type()(db, id);
+        }
+        wg_int decode(void* db, wg_int data) { 
+            return decode_var_type()(db, data);;
+        }
+    };
+
     typedef enum eWG_FieldType {
         eWG_NULLTYPE        = WG_NULLTYPE,
         eWG_RECORDTYPE      = WG_RECORDTYPE,
@@ -231,6 +256,7 @@ namespace wdb {
     template<> class Traits<Time>{ public: typedef Time type; typedef codec<Time> codec; typedef encode_query_param_time encode_param; };
     template<> class Traits<Null>{ public: typedef Null type; typedef codec<Null> codec; typedef encode_query_param_null encode_param; };
     template<> class Traits<Blob>{ public: typedef Blob type; typedef codec<Blob> codec; };
+    template<> class Traits<Var>{ public: typedef Var type; typedef codec<Var> codec; typedef encode_query_param_var encode_param; };
 
     template<class Impl_t, class IteratedType_t>
     class iterator {
