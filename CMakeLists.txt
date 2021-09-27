@@ -4,6 +4,7 @@ project(wdbplus VERSION 0.1.0)
 include(CTest)
 enable_testing()
 
+set (CMAKE_CXX_STANDARD 11)
 add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(example)

@@ -79,11 +79,11 @@ wdb::Time WhiteDb::localTime() const {
 }
 
 WhiteDb::iterator WhiteDb::begin(){
-    WhiteDb::BasicRecord br =  createRecord(wg_get_first_record(_db));
+    WhiteDb::BasicRecord br =  createRecord<WhiteDb::BasicRecord>(wg_get_first_record(_db));
     return iterator(br);
 }
 WhiteDb::iterator WhiteDb::end(){
-    WhiteDb::BasicRecord br = createRecord(nullptr);
+    WhiteDb::BasicRecord br = createRecord<WhiteDb::BasicRecord>(nullptr);
     return iterator(br);
 }
 
@@ -110,13 +110,13 @@ namespace wdb{
     decode_double::decode_double(): wdb::primitive<double,void*,wg_int>(&wg_decode_double)  {}
     encode_null::encode_null(): wdb::primitive<wg_int,void*,wg_int>(&wg_encode_null)  {}
     decode_null::decode_null(): wdb::primitive<wg_int,void*,wg_int>(&wg_decode_null) {}
-    encode_str::encode_str(): wdb::primitive<wg_int,void*,char*,char*>(&wg_encode_str)  {}
+    encode_str::encode_str(): wdb::primitive<wg_int,void*,const char*,const char*>(&wg_encode_str)  {}
     decode_str:: decode_str(): wdb::primitive<char*,void*,wg_int>(&wg_decode_str)  {}
     encode_date::encode_date(): wdb::primitive<wg_int,void*,int>(&wg_encode_date)  {}
     decode_date::decode_date(): wdb::primitive<int,void*,wg_int>(&wg_decode_date)  {}
     encode_time::encode_time(): wdb::primitive<wg_int,void*,int>(&wg_encode_time)  {}
     decode_time::decode_time(): wdb::primitive<int,void*,wg_int>(&wg_decode_time)  {}
-    encode_blob::encode_blob(): wdb::primitive<wg_int,void*,char*,char*,wg_int>(&wg_encode_blob)  {}
+    encode_blob::encode_blob(): wdb::primitive<wg_int,void*,const char*,const char*,wg_int>(&wg_encode_blob)  {}
     decode_blob::decode_blob(): wdb::primitive<char*,void*,wg_int>(&wg_decode_blob)  {}
     decode_blob_len:: decode_blob_len(): wdb::primitive<wg_int,void*,wg_int>(&wg_decode_blob_len)  {}
     decode_blob_type:: decode_blob_type(): wdb::primitive<char*,void*,wg_int>(&wg_decode_blob_type)  {}
@@ -151,7 +151,10 @@ namespace wdb{
     void Date::set(int d){
         this->date = d;    
     }
-
+    bool wdb::Date::operator == (Date const& d) const {
+        return d.date == date;
+    }
+    
     Time::Time(): time(0) {}
     Time::Time(int t): time(t) {}
     Time::Time(int h, int m, int s) {
@@ -167,6 +170,9 @@ namespace wdb{
     }
     void Time::set(int t){
         time = t;
+    }
+    bool wdb::Time::operator == (Time const& t) const {
+       return t.time == time;
     }
 
     Blob::Blob():_type(nullptr){}
@@ -231,7 +237,7 @@ namespace wdb{
     fetch_query::fetch_query(): wdb::primitive<void*,void*,wg_query*>(&wg_fetch) {};
     destroy_query::destroy_query(): wdb::primitive<void,void*,wg_query*>(&wg_free_query) {};
 
-    encode_query_param_null::encode_query_param_null(): wdb::primitive<wg_int,void*,char*>(&wg_encode_query_param_null) {}
+    encode_query_param_null::encode_query_param_null(): wdb::primitive<wg_int,void*,const char*>(&wg_encode_query_param_null) {}
     encode_query_param_record::encode_query_param_record(): wdb::primitive<wg_int,void*,void*>(&wg_encode_query_param_record) {}
     encode_query_param_char::encode_query_param_char(): wdb::primitive<wg_int,void*,char>(&wg_encode_query_param_char) {}
     encode_query_param_fixpoint::encode_query_param_fixpoint(): wdb::primitive<wg_int,void*,double>(&wg_encode_query_param_fixpoint) {}
@@ -240,7 +246,7 @@ namespace wdb{
     encode_query_param_var::encode_query_param_var(): wdb::primitive<wg_int,void*,wg_int>(&wg_encode_query_param_var) { }
     encode_query_param_int:: encode_query_param_int(): wdb::primitive<wg_int,void*,wg_int>(&wg_encode_query_param_int) { }
     encode_query_param_double::encode_query_param_double(): wdb::primitive<wg_int,void*,double>(&wg_encode_query_param_double) { }
-    encode_query_param_str::encode_query_param_str(): wdb::primitive<wg_int,void*,char*,char*>(&wg_encode_query_param_str) { }
+    encode_query_param_str::encode_query_param_str(): wdb::primitive<wg_int,void*,const char*,const char*>(&wg_encode_query_param_str) { }
     free_query_param::free_query_param(): wdb::primitive<wg_int,void*,wg_int>(&wg_free_query_param) {};
 }
 
