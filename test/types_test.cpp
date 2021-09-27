@@ -1,19 +1,20 @@
 #include "fixture_class.h"
 #include <vector>
 #include <map>
+#include <algorithm>
 
 typedef class _TypesFixture: 
     public wdb::test::TestFixtureT<wdb::test::TestDb> 
     {
     public:
         void* handle() { return this->db().handle(); }
-    } UT_Types;
+} UT_Types;
 
 
 TEST_F(UT_Types,integer){
 
     wdb::Traits<int>::type t = 100;
-    wdb::Traits<int>::codec cod;
+    wdb::Traits<int>::codec_t cod;
     wg_int encoded = cod.encode(handle(),t);
     ASSERT_EQ(cod.decode(handle(), encoded), t);
 
@@ -22,21 +23,21 @@ TEST_F(UT_Types,integer){
 TEST_F(UT_Types,double){
 
     wdb::Traits<double>::type d = 100.;
-    wdb::Traits<double>::codec cod;
+    wdb::Traits<double>::codec_t cod;
     wg_int encoded = cod.encode(handle(),d);
     ASSERT_EQ(cod.decode(handle(), encoded), d);
 }
 
 TEST_F(UT_Types,string){
     const wdb::Traits<const char*>::type c = "Hello world!";
-    wdb::Traits<const char*>::codec cod;
+    wdb::Traits<const char*>::codec_t cod;
     wg_int encoded = cod.encode(handle(),c, nullptr);
     ASSERT_STREQ(cod.decode(handle(),encoded),c);
 }
 
 TEST_F(UT_Types,date){
     wdb::Traits<wdb::Date>::type date1(2021,5,8);
-    wdb::Traits<wdb::Date>::codec cod;
+    wdb::Traits<wdb::Date>::codec_t cod;
     wg_int encoded = cod.encode(handle(),date1);
     wdb::Date date2 = cod.decode(handle(),encoded);
     int y1,y2,m1,m2,d1,d2;
@@ -60,14 +61,14 @@ TEST_F(UT_Types,date){
 TEST_F(UT_Types,dateCopy){
     
     typedef wdb::Traits<wdb::Date>::type Date_t;
-    typedef wdb::Traits<wdb::Date>::codec Codec_t;
+    typedef wdb::Traits<wdb::Date>::codec_t Codec_t;
     std::vector<Date_t> dates;
 
     const int year=2021;
     std::map<int,int> days_per_months = {{ 1, 31}, { 2, 28 }, {3, 31}, {4, 30}, {5, 31}, {6, 30}, {7, 31}, {8, 31}, {9, 30}, {10, 31}, {11, 30}, {12, 31}};
 
     for (int i=0; i < 2; i+=1){
-        std::for_each(std::cbegin(days_per_months), std::cend(days_per_months), [i,year,&dates](const std::pair<const int,int>& item){
+        std::for_each(std::begin(days_per_months), std::end(days_per_months), [i,year,&dates](const std::pair<const int,int>& item){
             for (int k=1; k<=item.second; k+=1){
                 dates.emplace_back(year+i,item.first,k);
             }
@@ -101,7 +102,7 @@ TEST_F(UT_Types,dateCopy){
 
 TEST_F(UT_Types,time){
     wdb::Traits<wdb::Time>::type time1(12,15,20);
-    wdb::Traits<wdb::Time>::codec cod;
+    wdb::Traits<wdb::Time>::codec_t cod;
     wg_int encoded = cod.encode(handle(),time1);
     wdb::Time time2 = cod.decode(handle(),encoded);
     int h1,h2,m1,m2,s1,s2;
@@ -124,7 +125,7 @@ TEST_F(UT_Types,time){
 TEST_F(UT_Types,blob){
     
     wdb::Traits<wdb::Blob>::type blob;
-    wdb::Traits<wdb::Blob>::codec cod;
+    wdb::Traits<wdb::Blob>::codec_t cod;
 
     const std::string data("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sodales, purus et rutrum posuere, nulla velit luctus risus fusce.");
     const std::string type("Latin blob");

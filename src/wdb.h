@@ -53,10 +53,10 @@ namespace wdb{
 class WhiteDb: private wdb::PrimitiveDatabase<WhiteDb> {
 public:
 
-    typedef PrimDb_t::BasicRecord BasicRecord;
+    typedef PrimDb_t::BasicRecord_t BasicRecord;
     typedef PrimDb_t::Field Field;
     typedef PrimDb_t::iterator iterator;
-    typedef PrimDb_t::Query Query;
+    typedef PrimDb_t::Query_t Query;
     template<wg_int NbFields>
     using Record = PrimDb_t::Record<NbFields>;
     template<wg_int NbFields>
@@ -94,7 +94,6 @@ public:
     wdb::ReadLock lock_read();
 private:
     friend WhiteDb::BasicRecord;
-    //friend wdb::PrimitiveDatabase<WhiteDb>;
     friend WhiteDb::PrimDb_t;
     void* handle();
     void* _db;

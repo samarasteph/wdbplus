@@ -31,13 +31,13 @@ namespace wdb {
     class decode_double: public wdb::primitive<double,void*,wg_int>  { public: decode_double(); };
     class encode_null: public wdb::primitive<wg_int,void*,wg_int>  { public: encode_null(); };
     class decode_null: public wdb::primitive<wg_int,void*,wg_int>  { public: decode_null(); };
-    class encode_str: public wdb::primitive<wg_int,void*,char*,char*>  { public: encode_str(); };
+    class encode_str: public wdb::primitive<wg_int,void*,const char*,const char*>  { public: encode_str(); };
     class decode_str: public wdb::primitive<char*,void*,wg_int>  { public: decode_str(); };
     class encode_date: public wdb::primitive<wg_int,void*,int>  { public: encode_date(); };
     class decode_date: public wdb::primitive<int,void*,wg_int>  { public: decode_date(); };
     class encode_time: public wdb::primitive<wg_int,void*,int>  { public: encode_time(); };
     class decode_time: public wdb::primitive<int,void*,wg_int>  { public: decode_time(); };
-    class encode_blob: public wdb::primitive<wg_int,void*,char*,char*,wg_int>  { public: encode_blob(); };
+    class encode_blob: public wdb::primitive<wg_int,void*,const char*,const char*,wg_int>  { public: encode_blob(); };
     class decode_blob: public wdb::primitive<char*,void*,wg_int>  { public: decode_blob(); };
     class decode_blob_len: public wdb::primitive<wg_int,void*,wg_int>  { public: decode_blob_len(); };
     class decode_blob_type: public wdb::primitive<char*,void*,wg_int>  { public: decode_blob_type(); };
@@ -60,7 +60,7 @@ namespace wdb {
     class make_query: public wdb::primitive<wg_query*,void*,void*,wg_int,wg_query_arg*,wg_int> { public: make_query(); };
     class fetch_query: public wdb::primitive<void*,void*,wg_query*> { public: fetch_query(); };
     class destroy_query: public wdb::primitive<void,void*,wg_query*> { public: destroy_query(); };
-    class encode_query_param_null:  public wdb::primitive<wg_int,void*,char*> { public: encode_query_param_null(); };
+    class encode_query_param_null:  public wdb::primitive<wg_int,void*,const char*> { public: encode_query_param_null(); };
     class encode_query_param_record: public wdb::primitive<wg_int,void*,void*> { public: encode_query_param_record(); };
     class encode_query_param_char: public wdb::primitive<wg_int,void*,char> { public: encode_query_param_char(); };
     class encode_query_param_fixpoint: public wdb::primitive<wg_int,void*,double> { public: encode_query_param_fixpoint(); };
@@ -69,7 +69,7 @@ namespace wdb {
     class encode_query_param_var:  public wdb::primitive<wg_int,void*,wg_int> { public: encode_query_param_var(); };
     class encode_query_param_int:  public wdb::primitive<wg_int,void*,wg_int> { public: encode_query_param_int(); };
     class encode_query_param_double: public wdb::primitive<wg_int,void*,double> { public: encode_query_param_double(); };
-    class encode_query_param_str: public wdb::primitive<wg_int,void*,char*,char*> { public: encode_query_param_str(); };
+    class encode_query_param_str: public wdb::primitive<wg_int,void*,const char*,const char*> { public: encode_query_param_str(); };
     class free_query_param: public wdb::primitive<wg_int,void*,wg_int> { public: free_query_param(); };
 
     class Date final { 
@@ -80,6 +80,7 @@ namespace wdb {
         int get() const;
         int get(int& y, int& m, int& d) const;
         void set(int date);
+        bool operator == (Date const& d) const;
     private:
         int date;
     };
@@ -91,6 +92,7 @@ namespace wdb {
         int get() const;
         int get(int& h, int& m, int& s) const;
         void set(int time);
+        bool operator == (Time const& d) const;
     private:    
         int time;
     };
@@ -221,22 +223,59 @@ namespace wdb {
         eWG_VARTYPE         = WG_VARTYPE
     } WG_FieldType;
 
-    template<class Type> class Traits{};
-    template<> class Traits<wg_int>{ public: typedef wg_int type; typedef codec<wg_int> codec; typedef encode_query_param_int encode_param; };
-    template<> class Traits<int>{ public: typedef int type; typedef codec<wg_int> codec; typedef encode_query_param_int encode_param; };
-    template<> class Traits<double>{ public: typedef double type; typedef codec<double> codec; typedef encode_query_param_double encode_param; };
-    template<> class Traits<char*>{ public: typedef char* type; typedef codec<char*> codec; typedef encode_query_param_str encode_param; };
-    template<> class Traits<const char*>{ public: typedef const char* type; typedef codec<const char*> codec; typedef encode_query_param_str encode_param; };
-    template<> class Traits<Date>{ public: typedef Date type; typedef codec<Date> codec; typedef encode_query_param_date encode_param; };
-    template<> class Traits<Time>{ public: typedef Time type; typedef codec<Time> codec; typedef encode_query_param_time encode_param; };
-    template<> class Traits<Null>{ public: typedef Null type; typedef codec<Null> codec; typedef encode_query_param_null encode_param; };
-    template<> class Traits<Blob>{ public: typedef Blob type; typedef codec<Blob> codec; };
+    class UnitaryType {};
+    class NullType: public UnitaryType {};
+    class NumericType: public UnitaryType {};
+    class StringType: public UnitaryType {};
+    class DateTimeType: public NumericType {};
+    class CompositeType{};
+    class RecordType: public CompositeType {};
+
+    template<class Type>
+    class TypeCategory {
+        public: typedef typename Type::type_category  type_category;
+    };
+    
+
+    template<> class TypeCategory<wg_int>{ public: typedef NumericType type_category; };
+    template<> class TypeCategory<int>{ public: typedef NumericType type_category; };
+    template<> class TypeCategory<double>{ public: typedef NumericType type_category; };
+    template<> class TypeCategory<char*>{ public: typedef StringType type_category; };
+    template<> class TypeCategory<const char*>{ public: typedef StringType type_category; };
+    template<> class TypeCategory<Date>{ public: typedef NumericType type_category; };
+    template<> class TypeCategory<Time>{ public: typedef DateTimeType type_category; };
+    template<> class TypeCategory<Null>{ public: typedef NullType type_category; };
+    template<> class TypeCategory<Blob>{ public: typedef StringType type_category; };
+
+    template <class Type_t>
+    struct is_unitary_type {
+        static constexpr bool value = std::is_base_of<UnitaryType, typename TypeCategory<Type_t>::type_category>::value;
+    };
+
+    static_assert(is_unitary_type<wg_int>::value, "should be true");
+
+    template<class Type_t> class Traits {
+        public:
+        typedef Type_t type;
+        typedef codec<Type_t> codec_t;
+        typedef typename Type_t::encode_query_param encode_param;
+    };
+    template<> class Traits<wg_int>{ public: typedef wg_int type; typedef codec<wg_int> codec_t; typedef encode_query_param_int encode_param; };
+    template<> class Traits<int>{ public: typedef int type; typedef codec<wg_int> codec_t; typedef encode_query_param_int encode_param; };
+    template<> class Traits<double>{ public: typedef double type; typedef codec<double> codec_t; typedef encode_query_param_double encode_param; };
+    template<> class Traits<char*>{ public: typedef char* type; typedef codec<char*> codec_t; typedef encode_query_param_str encode_param; };
+    template<> class Traits<const char*>{ public: typedef const char* type; typedef codec<const char*> codec_t; typedef encode_query_param_str encode_param; };
+    template<> class Traits<Date>{ public: typedef Date type; typedef codec<Date> codec_t; typedef encode_query_param_date encode_param; };
+    template<> class Traits<Time>{ public: typedef Time type; typedef codec<Time> codec_t; typedef encode_query_param_time encode_param; };
+    template<> class Traits<Null>{ public: typedef Null type; typedef codec<Null> codec_t; typedef encode_query_param_null encode_param; };
+    template<> class Traits<Blob>{ public: typedef Blob type; typedef codec<Blob> codec_t; };
+
 
     template<class Impl_t, class IteratedType_t>
     class iterator {
     public:
         typedef Impl_t  impl_t;
-        typedef IteratedType_t it_t;
+        typedef IteratedType_t type_t;
         typedef iterator<Impl_t, IteratedType_t> myit_t;
 
         impl_t& operator = (const iterator& i){
@@ -245,11 +284,11 @@ namespace wdb {
             }
             return static_cast<impl_t&>(*this);
         }
-        bool operator == (const impl_t& i){
-            return static_cast<impl_t*>(this)->equal(i);
+        bool operator == (const impl_t& i) const {
+            return static_cast<const impl_t*>(this)->equal(i);
         }
-        bool operator != (const impl_t& i){
-            return !static_cast<impl_t*>(this)->equal(i);
+        bool operator != (const impl_t& i) const {
+            return !static_cast<const impl_t*>(this)->equal(i);
         }
         impl_t operator ++ (){
             static_cast<impl_t*>(this)->next();
@@ -260,7 +299,7 @@ namespace wdb {
             static_cast<impl_t*>(this)->next();
             return i;
         }
-        IteratedType_t operator * (){
+        type_t operator * (){
             return static_cast<impl_t*>(this)->data();
         }
         protected:
@@ -297,10 +336,10 @@ namespace wdb {
             }
             return Field(*this);
         }
-        bool operator == (const Field& f){
+        bool operator == (const Field& f) const {
             return (_db->checkDb(f) && _rec == f._rec && _index == f._index);
         }
-        bool operator != (const Field& f){
+        bool operator != (const Field& f) const {
             return (!_db->checkDb(f) || _rec != f._rec || _index != f._index);
         }
         Field(const Field& f): _db(f._db), _rec(f._rec), _index(f._index){}
@@ -342,7 +381,10 @@ namespace wdb {
     template <class Database_t, uint nbFields>
     class Record {
     public:
-        class iterator: public wdb::iterator<iterator,Field<Database_t>>{
+        typedef encode_query_param_record encode_query_param;
+        typedef RecordType  type_category;
+
+        class iterator: public wdb::iterator<iterator,Field<Database_t>> {
         public:
             iterator(){}
         private:
@@ -357,7 +399,7 @@ namespace wdb {
             void assign(const iterator& i){
                 _f = i._f;
             }
-            bool equal(const iterator& i){
+            bool equal(const iterator& i) const {
                 return _f == i._f;
             }
             iterator(wdb::Field<Database_t>& f) { _f = f; }
@@ -405,28 +447,29 @@ namespace wdb {
         friend codec<Record<Database_t,nbFields>>;
         void* _rec;
         Database_t* _db;
-        Record(Database_t& db, void *rec): _rec(rec), _db(&db){};
+        Record(Database_t* db, void *rec): _rec(rec), _db(db){};
         Record() = delete;
     };
 
-
-    template<class Database_t,wg_int nbFields> 
+    template<class Database_t,uint nbFields> 
     class codec<Record<Database_t,nbFields>> {
     public:
         wg_int encode(void* db, Record<Database_t,nbFields>& data) { return primitive<wg_int,void*,void*>(&wg_encode_record)(db,data._rec); }
-        Record<Database_t,nbFields>   decode(void* db, wg_int data) { 
-            void* rec = primitive<void*,void*,wg_int>(&wg_decode_record)(db,data); 
-            return Record<Database_t,nbFields>(db,rec);
+        void*   decode(void* db, wg_int data) { 
+            return primitive<void*,void*,wg_int>(&wg_decode_record)(db,data); 
         }
     };
 
-    template<class Database_t,wg_int nbFields> 
-    class Traits<Record<Database_t,nbFields>>{ public: typedef Record<Database_t,nbFields> type; typedef codec<Record<Database_t,nbFields>> codec; typedef encode_query_param_record encode_param; };
-
+    template<class Database_t,wg_int NbFields>
+    class TypeCategory<Record<Database_t,NbFields>>{
+        public: typedef RecordType type_category;
+    };
 
     template<class Database_t>
     class BasicRecord {
     public:
+        typedef encode_query_param_record encode_query_param;
+        typedef RecordType  type_category;
 
         class iter: public wdb::iterator<iter,wdb::Field<Database_t>>{
         private:
@@ -441,12 +484,16 @@ namespace wdb {
             void assign(const iter& i){
                 _f = i._f;
             }
-            bool equal(const iter& i){
+            bool equal(const iter& i) const {
                 return _f == i._f;
             }
             iter(wdb::Field<Database_t>& f) { _f = f; }
             wdb::Field<Database_t> _f;
+        public:
+            iter(){}
         };
+        typedef iter iterator;
+
         BasicRecord(): _db(nullptr), _rec(nullptr) {}
         BasicRecord(const BasicRecord& r): _db(r._db), _rec(r._rec) { }
         BasicRecord& operator = (const BasicRecord& r){
@@ -456,10 +503,10 @@ namespace wdb {
             }
             return *this;
         }
-        bool operator == (const BasicRecord& r){
+        bool operator == (const BasicRecord& r) const {
             return _db == r._db && _rec == r._rec;
         }
-        bool operator != (const BasicRecord& r){
+        bool operator != (const BasicRecord& r) const {
             return _db != r._db || _rec != r._rec;
         }
         iter begin(){ 
@@ -498,10 +545,12 @@ namespace wdb {
         void*  decode(void* db, wg_int data) {
             return wdb::primitive<void*,void*,wg_int>(&wg_decode_record)(db,data);
         }
-
     };
 
-    template<class Database_t> class Traits<BasicRecord<Database_t>>{ typedef BasicRecord<Database_t> type; typedef codec<wg_int> codec; typedef encode_query_param_record encode_param; };
+    template<class Database_t>
+    class TypeCategory<BasicRecord<Database_t>>{
+        public: typedef RecordType type_category;
+    };
 
     template<class Type_t, wg_int iCondition, wg_int iColumn>
     class Condition{
@@ -559,14 +608,14 @@ namespace wdb {
             void assign(const iterator& i){
                 _r = i._r;
             }
-            bool equal(const iterator& i){
+            bool equal(const iterator& i) const {
                 return (_q == i._q && _r == i._r);
             }
             iterator(Database_t* db, Query* q, wdb::BasicRecord<Database_t> r): _q(q), _db(db){
                 _r = r;
             }
             iterator(Database_t* db, Query* q): _q(q), _db(db){
-                _r =_db->createRecord(nullptr);
+                _r =_db->template createRecord<wdb::BasicRecord<Database_t>>(nullptr);
             }
             wdb::BasicRecord<Database_t> _r;
             wdb::Query<Database_t>* _q;
@@ -638,6 +687,43 @@ namespace wdb {
         int _nb_args;
     };
 
+    template<template <class D, unsigned n> class Type_t, class Database_t, unsigned int nbFields=0>
+    struct is_record {
+        static constexpr wg_int n = static_cast<wg_int>(nbFields);
+        static constexpr bool value = std::is_same<Type_t<Database_t,n>, Record<Database_t,n>>::value;
+    };
+
+    template <class Type_t, class Database_t, bool unitary_type = is_unitary_type<Type_t>::value>
+    class __CodecDbAdapter__;
+
+    template <class Type_t, class Database_t>
+    class __CodecDbAdapter__<Type_t,Database_t,true>{
+        public:
+        template<class...ARGS>
+        wg_int encode(Database_t& db, void* dbhandle, Type_t& data, ARGS...args){
+            typename wdb::Traits<Type_t>::codec_t encoder;
+            return encoder.encode(dbhandle,data,args...);
+        }
+        template<class...ARGS>
+        Type_t decode(Database_t& db, void* dbhandle, wg_int f, ARGS...args){
+            typename wdb::Traits<Type_t>::codec_t decoder;
+            return decoder.decode(dbhandle,f,args...);
+        }
+    };
+
+    template <class Record_t, class Database_t>
+    class __CodecDbAdapter__<Record_t,Database_t,false> {
+        public:
+        wg_int encode(Database_t& db, void* dbhandle, Record_t& data){
+            typename wdb::Traits<Record_t>::codec_t encoder;
+            return encoder.encode(dbhandle,data);
+        }
+        Record_t decode(Database_t& db, void* dbhandle, wg_int f){
+            typename wdb::Traits<Record_t>::codec_t decoder;
+            return db.template createRecord<Record_t>(decoder.decode(dbhandle,f));
+        }
+    };
+
     template<class DatabaseImpl_t>
     class PrimitiveDatabase {
         public:
@@ -645,8 +731,8 @@ namespace wdb {
         typedef PrimitiveDatabase<DatabaseImpl_t> PrimDb_t;
         typedef DatabaseImpl_t  DbType_t;
         typedef wdb::Field<PrimDb_t> Field;
-        typedef BasicRecord<PrimDb_t> BasicRecord;
-        typedef Query<PrimDb_t> Query;
+        typedef BasicRecord<PrimDb_t> BasicRecord_t;
+        typedef Query<PrimDb_t> Query_t;
         template<wg_int NbFields>
         using Record = wdb::Record<PrimDb_t,NbFields>;
 
@@ -663,15 +749,12 @@ namespace wdb {
         Record<NbFields> createRecord(){
             wdb::create_record create;
             void* rec = create(_db.handle(), NbFields);
-            return Record<NbFields>(*this,rec);
+            return Record<NbFields>(this,rec);
         }
-        template <wg_int NbFields>
-        Record<NbFields> createRecord(void* rec){
-            return wdb::Record<PrimDb_t,NbFields>(*this,rec);
-        }
-
-        BasicRecord createRecord(void* rec){
-            return BasicRecord(this,rec);
+      
+        template <class Record_t>
+        Record_t createRecord(void* rec){
+            return Record_t(this,rec);
         }
 
         template <wg_int NbFields>
@@ -683,7 +766,7 @@ namespace wdb {
             return -1;
         }
 
-        wg_int deleteRecord(BasicRecord& rec){
+        wg_int deleteRecord(BasicRecord_t& rec){
             if (checkDb(rec)){
                 wdb::delete_record del;
                 return del(_db.handle(), rec._rec);
@@ -693,21 +776,14 @@ namespace wdb {
 
         template <class Type_t,class...ARGS>
         wg_int  encodeField(Type_t& data,ARGS...args){
-            wdb::codec<Type_t> cod;
-            return cod.encode(_db.handle(),data,args...);
+            __CodecDbAdapter__<Type_t,PrimDb_t> encoder;
+            return encoder.encode(*this,_db.handle(),data,args...);
         }
 
-        template <class Type_t,class...ARGS>
+        template <class Type_t, class...ARGS>
         Type_t  decodeField(wg_int f,ARGS...args){
-            wdb::codec<Type_t> cod;
-            return cod.decode(_db.handle(),f,args...);
-        }
-
-        template<>
-        BasicRecord decodeField<BasicRecord>(wg_int f){
-            wdb::codec<BasicRecord> cod;
-            void* rec = cod.decode(_db.handle(), f);
-            return BasicRecord(const_cast<PrimDb_t*>(this), rec);
+            __CodecDbAdapter__<Type_t,PrimDb_t> decoder;
+            return decoder.decode(*this,_db.handle(),f,args...);
         }
 
         template <wg_int NbFields, class Type_t,class...ARGS>
@@ -725,7 +801,7 @@ namespace wdb {
             return Field(rec._db,rec._rec,field_pos);
         }
 
-        Field  getRecordField(const BasicRecord& rec, wg_int field_pos, wg_int record_len){
+        Field getRecordField(const BasicRecord_t& rec, wg_int field_pos, wg_int record_len){
 
             if (rec._db && rec._db->_db.handle() == _db.handle()){
                 if (field_pos > -1 && field_pos < record_len){
@@ -736,20 +812,20 @@ namespace wdb {
             return Field(rec._db, rec._rec, record_len);
         }
 
-        BasicRecord nextRecord(const BasicRecord& rec){
-           return BasicRecord(this, next_record()(_db.handle(), rec._rec));
+        BasicRecord_t nextRecord(const BasicRecord_t& rec){
+           return BasicRecord_t(this, next_record()(_db.handle(), rec._rec));
         }
         template <wg_int NbFields>
         Field fieldIterator(const Record<NbFields>& rec) {
             return Field(this,rec._rec,0);
         }
-        Field fieldIterator(const BasicRecord& rec) {
+        Field fieldIterator(const BasicRecord_t& rec) {
            return Field(this,rec._rec,0);
         }
-        Query createQuery(){
-            return Query(this);
+        Query_t createQuery(){
+            return Query_t(this);
         }
-        wg_query* makeQuery(Query& q){
+        wg_query* makeQuery(Query_t& q){
             if (checkDb(q)  && !q._args.empty()){
                 wg_query_arg* args = const_cast<wg_query_arg*>(reinterpret_cast<const wg_query_arg*>(q._args.data()));
                 return make_query()(_db.handle(), NULL, 0, args, q._nb_args);
@@ -757,16 +833,16 @@ namespace wdb {
             return nullptr;
         }
 
-        BasicRecord fetch(Query& q){
+        BasicRecord_t fetch(Query_t& q){
             if (checkDb(q) && q._q){
                 void* rec = fetch_query()(_db.handle(),q._q);
                 if (rec){
-                    return createRecord(rec);
+                    return createRecord<BasicRecord_t>(rec);
                 }
             }
-            return createRecord(nullptr);
+            return createRecord<BasicRecord_t>(nullptr);
         }
-        void destroyQuery(Query& q){
+        void destroyQuery(Query_t& q){
             if (q._q && checkDb(q)){
                 wg_query_arg* args = const_cast<wg_query_arg*>(reinterpret_cast<const wg_query_arg*>(q._args.data()));
                 free_query_param freer;
@@ -791,7 +867,7 @@ namespace wdb {
             return obj._db && obj._db->_db.handle() == _db.handle();
         }
         private:
-        
+
         class iterator: public wdb::iterator<
             iterator,
             wdb::BasicRecord<PrimDb_t>> 
@@ -800,13 +876,13 @@ namespace wdb {
             typedef wdb::iterator<iterator,wdb::BasicRecord<PrimDb_t>> base_t;
             iterator() {}
         private:
-            typedef BasicRecord it_t; 
+            typedef BasicRecord_t it_t; 
 
-            iterator(BasicRecord& r){ _r = r; }
+            iterator(BasicRecord_t& r){ _r = r; }
             void assign(const iterator& i){
                 _r = i._r;
             }
-            bool equal(const iterator& i){
+            bool equal(const iterator& i) const {
                 return _r == i._r;
             }
             it_t next(){
@@ -833,21 +909,21 @@ namespace wdb {
                 }
                 return *this;
             }
-            bool operator == (const rec_iterator& i){
-                return (_db._db.handle()==&i._db._db.handle() && _rec_obj._rec==i._rec_obj._rec);
+            bool operator == (const rec_iterator& i) const {
+                return (_db._db.handle()==i._db._db.handle() && _rec_obj._rec==i._rec_obj._rec);
             }
-            bool operator != (const rec_iterator& i){
+            bool operator != (const rec_iterator& i) const {
                 return (_db._db.handle()!=i._db._db.handle() || _rec_obj._rec!=i._rec_obj._rec);
             }
             rec_iterator operator ++ (){
                 wdb::next_record next;
-                _rec_obj = Record<NbField>(_db,next(_db._db,_rec_obj._rec));
+                _rec_obj = _db.createRecord<Record<NbField>>(next(_db._db.handle(),_rec_obj._rec));
                 return rec_iterator<NbField>(*this);
             }
             rec_iterator operator ++ (int){
                 rec_iterator<NbField> i(*this);
                 wdb::next_record next;
-                _rec_obj = _db.createRecord<NbField>(next(_db._db.handle(),_rec_obj._rec));
+                _rec_obj = _db.createRecord<Record<NbField>>(next(_db._db.handle(),_rec_obj._rec));
                 return i;
             }
             Record<NbField> operator * (){
@@ -860,7 +936,7 @@ namespace wdb {
             friend PrimDb_t;
             friend DbType_t;
             rec_iterator(PrimDb_t& db, void* rec): 
-                _db(db), _rec_obj(db,rec){}
+                _db(db), _rec_obj(&db,rec){}
             rec_iterator() = delete;
             PrimDb_t& _db;
             Record<NbField> _rec_obj;
