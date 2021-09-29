@@ -4,7 +4,9 @@
 #include <iterator>
 #include <cassert>
 #include <whitedb/dbapi.h>
-#include <whitedb/indexapi.h>
+extern "C" {
+    #include <whitedb/indexapi.h>
+}
 
 #ifndef __WDB_TEMPLATE_HPP__
 #define __WDB_TEMPLATE_HPP__
