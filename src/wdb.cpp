@@ -102,6 +102,31 @@ ssize_t WhiteDb::dbFreeSize() const{
     return wg_database_freesize(_db);
 }
 
+wg_int WhiteDb::create_index(wg_int column, wg_int type, wg_int *matchrec, wg_int reclen){
+    return wg_create_index(_db,column,type,matchrec,reclen);
+}
+wg_int WhiteDb::create_multi_index(wg_int *columns, wg_int col_count, wg_int type, wg_int *matchrec, wg_int reclen){
+    return wg_create_multi_index(_db,columns,col_count,type,matchrec,reclen);
+}
+wg_int WhiteDb::drop_index(wg_int index_id){
+    return wg_drop_index(_db,index_id);
+}
+wg_int WhiteDb::column_to_index_id(wg_int column, wg_int type, wg_int *matchrec, wg_int reclen){
+    return wg_column_to_index_id(_db,column,type,matchrec,reclen);
+}
+wg_int WhiteDb::multi_column_to_index_id(wg_int *columns, wg_int col_count, wg_int type, wg_int *matchrec, wg_int reclen){
+    return wg_multi_column_to_index_id(_db,columns,col_count,type,matchrec,reclen);
+}
+wg_int WhiteDb::get_index_type(wg_int index_id){
+    return wg_get_index_type(_db,index_id);
+}
+void * WhiteDb::get_index_template(wg_int index_id, wg_int *reclen){
+    return wg_get_index_template(_db,index_id,reclen);
+}
+void * WhiteDb::get_all_indexes(wg_int *count){
+    return wg_get_all_indexes(_db,count);
+}
+
 namespace wdb{
 
     encode_int::encode_int(): wdb::primitive<wg_int,void*,wg_int>(&wg_encode_int)  {}
@@ -118,9 +143,11 @@ namespace wdb{
     decode_time::decode_time(): wdb::primitive<int,void*,wg_int>(&wg_decode_time)  {}
     encode_blob::encode_blob(): wdb::primitive<wg_int,void*,const char*,const char*,wg_int>(&wg_encode_blob)  {}
     decode_blob::decode_blob(): wdb::primitive<char*,void*,wg_int>(&wg_decode_blob)  {}
-    decode_blob_len:: decode_blob_len(): wdb::primitive<wg_int,void*,wg_int>(&wg_decode_blob_len)  {}
-    decode_blob_type:: decode_blob_type(): wdb::primitive<char*,void*,wg_int>(&wg_decode_blob_type)  {}
-    decode_blob_type_len:: decode_blob_type_len(): wdb::primitive<wg_int,void*,wg_int>(&wg_decode_blob_type_len)  {}
+    decode_blob_len::decode_blob_len(): wdb::primitive<wg_int,void*,wg_int>(&wg_decode_blob_len)  {}
+    decode_blob_type::decode_blob_type(): wdb::primitive<char*,void*,wg_int>(&wg_decode_blob_type)  {}
+    decode_blob_type_len::decode_blob_type_len(): wdb::primitive<wg_int,void*,wg_int>(&wg_decode_blob_type_len)  {}
+    encode_var_type::encode_var_type(): wdb::primitive<wg_int,void*,wg_int>(&wg_encode_var) {}
+    decode_var_type::decode_var_type(): wdb::primitive<wg_int,void*,wg_int>(&wg_decode_var) {}
 
     create_record::create_record(): wdb::primitive<void*,void*,wg_int>(&wg_create_record){}
     delete_record::delete_record(): wdb::primitive<wg_int,void*,void*>(&wg_delete_record){}
@@ -232,6 +259,11 @@ namespace wdb{
         b._type = nullptr;
         return *this;
     }
+
+    Var::Var(const wg_int id): _id(id) {}
+    Var::Var(const Var& var): _id(var._id) {}
+    wg_int Var::id() const { return _id; }
+    Var::operator wg_int () const { return _id; }
 
     make_query::make_query(): wdb::primitive<wg_query*,void*,void*,wg_int,wg_query_arg*,wg_int>(&wg_make_query) {};
     fetch_query::fetch_query(): wdb::primitive<void*,void*,wg_query*>(&wg_fetch) {};
