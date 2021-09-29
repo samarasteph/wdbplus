@@ -3,6 +3,8 @@
 #include <cstring>
 #include <fstream>
 #include <sstream>
+#include <memory>
+#include <algorithm>
 
 template<class Type_t> class FieldAssignPrimitive{
     wg_int operator ()(void* db, void* record, wg_int fieldnr, Type_t data){
@@ -106,23 +108,48 @@ ssize_t WhiteDb::dbFreeSize() const{
 wdb::Index WhiteDb::create_index(wg_int column){
     wg_int res = wg_create_index(_db,column,WG_INDEX_TYPE_TTREE,NULL,0);
     if (res != 0){
-        throw std::runtime_error("Failed to create index");
+        std::ostringstream oss("Failed to create index");
+        oss << " column " << column;
+        throw std::runtime_error(oss.str());
     }
-    wg_int id = column_to_index_id(column);
-    return wdb::Index (id);
+    return column_to_index(column);
 }
 
-wg_int WhiteDb::create_multi_index(wg_int *columns, wg_int col_count, wg_int type, wg_int *matchrec, wg_int reclen){
-    return wg_create_multi_index(_db,columns,col_count,type,matchrec,reclen);
+wdb::Index WhiteDb::create_multi_index(const std::list<wg_int>& columns){
+    std::unique_ptr<wg_int[]> ptr_data(new wg_int[columns.size()]);
+    std::copy(std::begin(columns), std::end(columns), ptr_data.get());
+    wg_int res = wg_create_multi_index(_db,ptr_data.get(),columns.size(),WG_INDEX_TYPE_TTREE,NULL,0);
+    if (res != 0){
+        std::ostringstream oss("Failed to create index for columns {");
+        std::copy(std::begin(columns), std::end(columns), std::ostream_iterator<wg_int>(oss,","));
+        oss << "}";
+        throw std::runtime_error(oss.str());
+    }
+    return multi_column_to_index(columns);
 }
-wg_int WhiteDb::drop_index(wg_int index_id){
-    return wg_drop_index(_db,index_id);
+bool WhiteDb::drop_index(wg_int index_id){
+    return (wg_drop_index(_db,index_id) == 0);
 }
-wg_int WhiteDb::column_to_index_id(wg_int column){
-    return wg_column_to_index_id(_db,column,WG_INDEX_TYPE_TTREE,NULL,0);
+wdb::Index WhiteDb::column_to_index(wg_int column){
+    wg_int id = wg_column_to_index_id(_db,column,WG_INDEX_TYPE_TTREE,NULL,0);
+    if (id == -1){
+        std::ostringstream oss("Failed retrieving index for column");
+        oss << " " << column;
+        throw std::runtime_error(oss.str());
+    }
+    return wdb::Index(id);
 }
-wg_int WhiteDb::multi_column_to_index_id(wg_int *columns, wg_int col_count, wg_int type, wg_int *matchrec, wg_int reclen){
-    return wg_multi_column_to_index_id(_db,columns,col_count,type,matchrec,reclen);
+wdb::Index WhiteDb::multi_column_to_index(const std::list<wg_int>& columns){
+    std::unique_ptr<wg_int[]> ptr_data(new wg_int[columns.size()]);
+    std::copy(std::begin(columns), std::end(columns), ptr_data.get());
+    wg_int id = wg_multi_column_to_index_id(_db,ptr_data.get(),columns.size(),WG_INDEX_TYPE_TTREE,NULL,0);
+    if (id == -1){
+        std::ostringstream oss("Failed retrieving index for columns {");
+        std::copy(std::begin(columns), std::end(columns), std::ostream_iterator<wg_int>(oss,","));
+        oss << "}";
+        throw std::runtime_error(oss.str());
+    }
+    return wdb::Index(id);
 }
 wg_int WhiteDb::get_index_type(wg_int index_id){
     return wg_get_index_type(_db,index_id);
@@ -134,9 +161,7 @@ std::list<wdb::Index> WhiteDb::get_all_indexes(){
     wg_int count;
     wg_int* indexes = (wg_int*) wg_get_all_indexes(_db,&count);
     std::list<wdb::Index> l;
-    for(wg_int idx = 0; idx < count; idx += 1){
-        l.push_back( wdb::Index(indexes[idx]) );
-    }
+    std::transform(indexes, indexes+count, std::back_inserter(l), [](wg_int id){ return wdb::Index(id); });
     return std::move(l);
 }
 

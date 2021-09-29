@@ -96,10 +96,10 @@ public:
 
     //indexes
     wdb::Index create_index(wg_int column);
-    wg_int create_multi_index(wg_int *columns, wg_int col_count, wg_int type, wg_int *matchrec, wg_int reclen);
-    wg_int drop_index(wg_int index_id);
-    wg_int column_to_index_id(wg_int column);
-    wg_int multi_column_to_index_id(wg_int *columns, wg_int col_count, wg_int type, wg_int *matchrec, wg_int reclen);
+    wdb::Index create_multi_index(const std::list<wg_int>& columns);
+    bool drop_index(wg_int index_id);
+    wdb::Index column_to_index(wg_int column);
+    wdb::Index multi_column_to_index(const std::list<wg_int>& columns);
     wg_int get_index_type(wg_int index_id);
     void * get_index_template(wg_int index_id, wg_int *reclen);
     std::list<wdb::Index> get_all_indexes();

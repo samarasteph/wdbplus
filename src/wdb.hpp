@@ -985,6 +985,13 @@ namespace wdb {
     private:
         wg_int _id;
     };
+
+    class IndexTemplate {
+    public:
+        IndexTemplate();
+    private:
+        
+    };
 }
 
 #endif
