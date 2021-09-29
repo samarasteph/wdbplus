@@ -973,6 +973,18 @@ namespace wdb {
         DatabaseImpl_t& _db;
     };
 
+    class Index {
+    public:
+        Index(wg_int id);
+        Index(const Index& i);
+        const Index& operator = (const Index& i);
+        Index(Index&&);
+        Index& operator = (Index&&);
+        bool operator == (const Index& i) const;
+        bool operator != (const Index& i) const;
+    private:
+        wg_int _id;
+    };
 }
 
 #endif

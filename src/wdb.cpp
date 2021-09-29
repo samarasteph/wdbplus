@@ -2,6 +2,7 @@
 #include "wdb.h"
 #include <cstring>
 #include <fstream>
+#include <sstream>
 
 template<class Type_t> class FieldAssignPrimitive{
     wg_int operator ()(void* db, void* record, wg_int fieldnr, Type_t data){
@@ -102,17 +103,23 @@ ssize_t WhiteDb::dbFreeSize() const{
     return wg_database_freesize(_db);
 }
 
-wg_int WhiteDb::create_index(wg_int column, wg_int type, wg_int *matchrec, wg_int reclen){
-    return wg_create_index(_db,column,type,matchrec,reclen);
+wdb::Index WhiteDb::create_index(wg_int column){
+    wg_int res = wg_create_index(_db,column,WG_INDEX_TYPE_TTREE,NULL,0);
+    if (res != 0){
+        throw std::runtime_error("Failed to create index");
+    }
+    wg_int id = column_to_index_id(column);
+    return wdb::Index (id);
 }
+
 wg_int WhiteDb::create_multi_index(wg_int *columns, wg_int col_count, wg_int type, wg_int *matchrec, wg_int reclen){
     return wg_create_multi_index(_db,columns,col_count,type,matchrec,reclen);
 }
 wg_int WhiteDb::drop_index(wg_int index_id){
     return wg_drop_index(_db,index_id);
 }
-wg_int WhiteDb::column_to_index_id(wg_int column, wg_int type, wg_int *matchrec, wg_int reclen){
-    return wg_column_to_index_id(_db,column,type,matchrec,reclen);
+wg_int WhiteDb::column_to_index_id(wg_int column){
+    return wg_column_to_index_id(_db,column,WG_INDEX_TYPE_TTREE,NULL,0);
 }
 wg_int WhiteDb::multi_column_to_index_id(wg_int *columns, wg_int col_count, wg_int type, wg_int *matchrec, wg_int reclen){
     return wg_multi_column_to_index_id(_db,columns,col_count,type,matchrec,reclen);
@@ -123,8 +130,14 @@ wg_int WhiteDb::get_index_type(wg_int index_id){
 void * WhiteDb::get_index_template(wg_int index_id, wg_int *reclen){
     return wg_get_index_template(_db,index_id,reclen);
 }
-void * WhiteDb::get_all_indexes(wg_int *count){
-    return wg_get_all_indexes(_db,count);
+std::list<wdb::Index> WhiteDb::get_all_indexes(){
+    wg_int count;
+    wg_int* indexes = (wg_int*) wg_get_all_indexes(_db,&count);
+    std::list<wdb::Index> l;
+    for(wg_int idx = 0; idx < count; idx += 1){
+        l.push_back( wdb::Index(indexes[idx]) );
+    }
+    return std::move(l);
 }
 
 namespace wdb{
@@ -280,6 +293,29 @@ namespace wdb{
     encode_query_param_double::encode_query_param_double(): wdb::primitive<wg_int,void*,double>(&wg_encode_query_param_double) { }
     encode_query_param_str::encode_query_param_str(): wdb::primitive<wg_int,void*,const char*,const char*>(&wg_encode_query_param_str) { }
     free_query_param::free_query_param(): wdb::primitive<wg_int,void*,wg_int>(&wg_free_query_param) {};
+
+    Index::Index(wg_int id): _id(id) {}
+    Index::Index(const Index& i): _id(i._id) {}
+    const Index& Index::operator = (const Index& i) {
+        if (&i != this){
+            _id = i._id;
+        }
+        return *this;
+    }
+    Index::Index(Index&& i): _id(i._id) { i._id = -1; }
+    Index& Index::operator = (Index&& i) {
+        if (&i != this){
+            _id = i._id;
+            i._id = 0;
+        }
+        return *this;
+    }
+    bool Index::operator == (const Index& i) const {
+        return i._id == _id;
+    }
+    bool Index::operator != (const Index& i) const {
+        return i._id != _id;
+    }
 }
 
 wdb::WriteLock::WriteLock(): _db(nullptr), _lock(0) {}
